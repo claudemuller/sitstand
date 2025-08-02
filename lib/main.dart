@@ -1,0 +1,324 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:tray_manager/tray_manager.dart';
+import 'package:window_manager/window_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await windowManager.ensureInitialized();
+
+  WindowOptions windowOptions = const WindowOptions(
+    size: Size(250, 250),
+    center: true,
+    skipTaskbar: true,
+    titleBarStyle: TitleBarStyle.hidden,
+  );
+
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    // await windowManager.hide(); // Hides window at launch
+  });
+
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Sitstand',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+      ),
+      home: const TrayApp(title: 'Sitstand'),
+    );
+  }
+}
+
+class TrayApp extends StatefulWidget {
+  const TrayApp({super.key, required this.title});
+
+  final String title;
+
+  @override
+  State<TrayApp> createState() => _TrayAppState();
+}
+
+class Options {
+  int standMillis;
+  int sitMillis;
+
+  Options({required this.standMillis, required this.sitMillis});
+}
+
+class _TrayAppState extends State<TrayApp> with TrayListener {
+  final FlutterLocalNotificationsPlugin notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  static final int _twentyMins = 20 * 60 * 1000;
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _standInputController = TextEditingController(
+    text: _twentyMins.toString(),
+  );
+  final TextEditingController _sitInputController = TextEditingController(
+    text: _twentyMins.toString(),
+  );
+
+  Timer? _timer;
+  final Options _options = Options(
+    standMillis: _twentyMins,
+    sitMillis: _twentyMins,
+  );
+  bool _standing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initTray();
+    _initNotifications();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _standInputController.dispose();
+    _sitInputController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initTray() async {
+    await trayManager.setIcon('assets/tray_icon.png');
+
+    await trayManager.setContextMenu(
+      Menu(
+        items: [
+          MenuItem(key: 'options', label: 'Options'),
+          MenuItem(key: 'exit', label: 'Exit'),
+        ],
+      ),
+    );
+
+    trayManager.addListener(this);
+
+    final prefs = await SharedPreferences.getInstance();
+
+    int? standDuration = prefs.getInt('standDuration');
+    if (standDuration != null) {
+      setState(() {
+        _options.standMillis = standDuration;
+      });
+      _standInputController.text = standDuration.toString();
+    }
+
+    int? sitDuration = prefs.getInt('sitDuration');
+    if (sitDuration != null) {
+      setState(() {
+        _options.sitMillis = sitDuration;
+      });
+      _sitInputController.text = sitDuration.toString();
+    }
+
+    debugPrint(_options.sitMillis.toString());
+  }
+
+  Future<void> _initNotifications() async {
+    const InitializationSettings initSettings = InitializationSettings(
+      linux: LinuxInitializationSettings(defaultActionName: 'OK'),
+      // windows: WindowsInitializationSettings(
+      //   guid: '',
+      // ),
+      macOS: DarwinInitializationSettings(),
+    );
+
+    await notificationsPlugin.initialize(initSettings);
+  }
+
+  void _startTimer() {
+    if (_standing) {
+      _timer = Timer.periodic(Duration(milliseconds: _options.sitMillis), (
+        Timer t,
+      ) {
+        final String title = "${_options.sitMillis.toString()} Reminder";
+        final String body = "Time to switch to sitting!";
+        _standing = false;
+
+        _showNotification(title, body);
+        _showMessageBox(title, body);
+
+        _timer?.cancel();
+        _startTimer();
+      });
+    } else {
+      _timer = Timer.periodic(Duration(seconds: 5), (Timer t) {
+        final String title = "${_options.sitMillis.toString()} Reminder";
+        final String body = "Time to switch to standing!";
+        _standing = true;
+
+        _showNotification(title, body);
+        _showMessageBox(title, body);
+
+        _timer?.cancel();
+        _startTimer();
+      });
+    }
+  }
+
+  Future<void> _showNotification(String title, String body) async {
+    const NotificationDetails notificationDetails = NotificationDetails(
+      linux: LinuxNotificationDetails(),
+      // windows: WindowsNotificationDetails(),
+      macOS: DarwinNotificationDetails(),
+    );
+
+    await notificationsPlugin.show(0, title, body, notificationDetails);
+  }
+
+  Future<void> _showMessageBox(String title, String body) async {
+    if (Platform.isWindows) {
+      await Process.run('powershell', [
+        '-Command',
+        '[System.Windows.Forms.MessageBox]::Show("$body", "$title")',
+      ]);
+      return;
+    }
+
+    if (Platform.isLinux) {
+      // Try zenity (GNOME) or kdialog (KDE)
+      final result = await Process.run('which', ['zenity']);
+      if (result.exitCode == 0) {
+        await Process.run('zenity', [
+          '--info',
+          '--title=$title',
+          '--text=$body',
+        ]);
+      } else {
+        // Fallback to kdialog
+        await Process.run('kdialog', ['--msgbox', body, '--title', title]);
+      }
+      return;
+    }
+
+    if (Platform.isMacOS) {
+      await Process.run('osascript', [
+        '-e',
+        'display dialog "$body" with title "$title" buttons {"OK"} default button "OK"',
+      ]);
+      return;
+    }
+  }
+
+  Future<void> _saveOptions() async {
+    setState(() {
+      _options.sitMillis = int.parse(_sitInputController.text);
+      _options.standMillis = int.parse(_standInputController.text);
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt('sitDuration', _options.sitMillis);
+    prefs.setInt('standDuration', _options.standMillis);
+
+    await windowManager.hide();
+  }
+
+  @override
+  void onTrayIconMouseDown() async {
+    await trayManager.popUpContextMenu();
+  }
+
+  @override
+  void onTrayMenuItemClick(MenuItem menuItem) async {
+    switch (menuItem.key) {
+      case 'options':
+        await windowManager.show();
+        await windowManager.focus();
+        break;
+
+      case 'exit':
+        _timer?.cancel();
+        await trayManager.destroy();
+        exit(0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: theme.colorScheme.inversePrimary,
+        title: Text(widget.title),
+      ),
+
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _standInputController,
+                  decoration: const InputDecoration(
+                    labelText: 'Standing duration in mins',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (String? value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Enter a duration';
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (item) {
+                    _saveOptions();
+                  },
+                ),
+
+                SizedBox(height: 10),
+
+                TextFormField(
+                  controller: _sitInputController,
+                  decoration: const InputDecoration(
+                    labelText: 'Sitting duration in mins',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (String? value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Enter a duration';
+                    }
+                    return null;
+                  },
+                  onFieldSubmitted: (item) {
+                    _saveOptions();
+                  },
+                ),
+
+                SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    Expanded(child: SizedBox(width: 10)),
+                    ElevatedButton(
+                      onPressed: _saveOptions,
+                      child: Icon(Icons.save),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
