@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sitstand/options.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.title});
@@ -15,31 +17,16 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class Options {
-  int standMillis;
-  int sitMillis;
-  bool enableNotifications = false;
-  bool enableMessaging = true;
-
-  Options(this.standMillis, this.sitMillis);
-}
-
 class _SettingsPageState extends State<SettingsPage> with TrayListener {
   final FlutterLocalNotificationsPlugin notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  static final int _twentyMins = 20 * 60 * 1000;
-
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _standInputController = TextEditingController(
-    text: _twentyMins.toString(),
-  );
-  final TextEditingController _sitInputController = TextEditingController(
-    text: _twentyMins.toString(),
-  );
+  final TextEditingController _standInputController = TextEditingController();
+  final TextEditingController _sitInputController = TextEditingController();
 
+  Options _options = Options();
   Timer? _timer;
-  final Options _options = Options(_twentyMins, _twentyMins);
   bool _standing = false;
 
   @override
@@ -85,6 +72,17 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     await notificationsPlugin.initialize(initSettings);
   }
 
+  Future<void> _initOptions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? options = prefs.getString(_options.name);
+
+    if (options == null) return;
+
+    setState(() {
+      _options = Options.fromJson(jsonDecode(options));
+    });
+  }
+
   void _startTimer() {
     if (_standing) {
       _timer = Timer.periodic(Duration(milliseconds: _options.sitMillis), (
@@ -123,36 +121,6 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
         _startTimer();
       });
     }
-  }
-
-  Future<void> _initOptions() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    int? standDuration = prefs.getInt('standDuration');
-    if (standDuration != null) {
-      setState(() {
-        _options.standMillis = standDuration;
-      });
-      _standInputController.text = standDuration.toString();
-    }
-
-    int? sitDuration = prefs.getInt('sitDuration');
-    if (sitDuration != null) {
-      setState(() {
-        _options.sitMillis = sitDuration;
-      });
-      _sitInputController.text = sitDuration.toString();
-    }
-
-    bool? enableNotifications = prefs.getBool('enableNotifications');
-    if (enableNotifications != null) {
-      setState(() {
-        _options.enableNotifications = enableNotifications;
-      });
-      _sitInputController.text = sitDuration.toString();
-    }
-
-    debugPrint(_options.sitMillis.toString());
   }
 
   Future<void> _showNotification(String title, String body) async {
@@ -200,14 +168,15 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   }
 
   Future<void> _saveOptions() async {
-    setState(() {
-      _options.sitMillis = int.parse(_sitInputController.text);
-      _options.standMillis = int.parse(_standInputController.text);
-    });
+    debugPrint("options: ${jsonEncode(_options.toJson())}");
+
+    // setState(() {
+    //   _options.sitMillis = int.parse(_sitInputController.text);
+    //   _options.standMillis = int.parse(_standInputController.text);
+    // });
 
     final prefs = await SharedPreferences.getInstance();
-    prefs.setInt('sitDuration', _options.sitMillis);
-    prefs.setInt('standDuration', _options.standMillis);
+    prefs.setString(_options.name, jsonEncode(_options.toJson()));
 
     await windowManager.hide();
   }
@@ -261,8 +230,10 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                     }
                     return null;
                   },
-                  onFieldSubmitted: (item) {
-                    _saveOptions();
+                  onChanged: (String val) => {
+                    setState(() {
+                      _options.standMillis = int.parse(val);
+                    }),
                   },
                 ),
 
@@ -280,9 +251,41 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                     }
                     return null;
                   },
-                  onFieldSubmitted: (item) {
-                    _saveOptions();
+                  onChanged: (String val) => {
+                    setState(() {
+                      _options.sitMillis = int.parse(val);
+                    }),
                   },
+                ),
+
+                Row(
+                  children: [
+                    Text("Enable notifications"),
+                    Checkbox(
+                      value: _options.enableNotifications,
+                      onChanged: (bool? val) => {
+                        setState(() {
+                          _options.enableNotifications = val ?? false;
+                        }),
+                      },
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    Text("Enable messaging"),
+                    Checkbox(
+                      value: _options.enableMessaging,
+                      onChanged: (bool? val) => {
+                        setState(() {
+                          _options.enableMessaging = val ?? false;
+                        }),
+                      },
+                    ),
+                  ],
                 ),
 
                 SizedBox(height: 10),
