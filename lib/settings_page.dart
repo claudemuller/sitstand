@@ -81,14 +81,15 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     setState(() {
       _options = Options.fromJson(jsonDecode(options));
     });
+
+    _standInputController.text = _options.standMins.toString();
+    _sitInputController.text = _options.sitMins.toString();
   }
 
   void _startTimer() {
     if (_standing) {
-      _timer = Timer.periodic(Duration(milliseconds: _options.sitMillis), (
-        Timer t,
-      ) {
-        final String title = "${_options.sitMillis.toString()} Reminder";
+      _timer = Timer.periodic(Duration(minutes: _options.sitMins), (Timer t) {
+        final String title = "${_options.sitMins.toString()} Reminder";
         final String body = "Time to switch to standing!";
         _standing = false;
 
@@ -103,10 +104,8 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
         _startTimer();
       });
     } else {
-      _timer = Timer.periodic(Duration(seconds: _options.standMillis), (
-        Timer t,
-      ) {
-        final String title = "${_options.standMillis.toString()} Reminder";
+      _timer = Timer.periodic(Duration(minutes: _options.standMins), (Timer t) {
+        final String title = "${_options.standMins.toString()} Reminder";
         final String body = "Time to switch to sitting!";
         _standing = true;
 
@@ -168,17 +167,10 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   }
 
   Future<void> _saveOptions() async {
-    debugPrint("options: ${jsonEncode(_options.toJson())}");
-
-    // setState(() {
-    //   _options.sitMillis = int.parse(_sitInputController.text);
-    //   _options.standMillis = int.parse(_standInputController.text);
-    // });
-
     final prefs = await SharedPreferences.getInstance();
     prefs.setString(_options.name, jsonEncode(_options.toJson()));
 
-    await windowManager.hide();
+    // await windowManager.hide();
   }
 
   @override
@@ -232,35 +224,64 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                   },
                   onChanged: (String val) => {
                     setState(() {
-                      _options.standMillis = int.parse(val);
+                      _options.standMins = int.parse(val);
                     }),
                   },
                 ),
 
                 SizedBox(height: 10),
 
-                TextFormField(
-                  controller: _sitInputController,
-                  decoration: const InputDecoration(
-                    labelText: 'Sitting duration in mins',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (String? value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter a duration';
-                    }
-                    return null;
-                  },
-                  onChanged: (String val) => {
-                    setState(() {
-                      _options.sitMillis = int.parse(val);
-                    }),
-                  },
+                // TextFormField(
+                //   controller: _sitInputController,
+                //   decoration: const InputDecoration(
+                //     labelText: 'Sitting duration in mins',
+                //     border: OutlineInputBorder(),
+                //   ),
+                //   validator: (String? value) {
+                //     if (value == null || value.isEmpty) {
+                //       return 'Enter a duration';
+                //     }
+                //     return null;
+                //   },
+                //   onChanged: (String val) => {
+                //     setState(() {
+                //       _options.sitMins = int.parse(val);
+                //     }),
+                //   },
+                // ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.remove),
+                      onPressed: () {
+                        setState(() {});
+                      },
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text('1', style: TextStyle(fontSize: 18)),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: () {
+                        setState(() {});
+                      },
+                    ),
+                  ],
                 ),
 
                 Row(
                   children: [
                     Text("Enable notifications"),
+                    Spacer(),
                     Checkbox(
                       value: _options.enableNotifications,
                       onChanged: (bool? val) => {
@@ -272,11 +293,10 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                   ],
                 ),
 
-                SizedBox(height: 10),
-
                 Row(
                   children: [
                     Text("Enable messaging"),
+                    Spacer(),
                     Checkbox(
                       value: _options.enableMessaging,
                       onChanged: (bool? val) => {

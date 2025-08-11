@@ -1,28 +1,28 @@
 class Options {
   final String name = "options";
-  int standMillis;
-  int sitMillis;
+  int standMins;
+  int sitMins;
   bool enableNotifications;
   bool enableMessaging;
 
-  static const int _twentyMins = 20 * 60 * 1000;
+  static const int _twentyMins = 20;
 
   Options({
-    this.standMillis = _twentyMins,
-    this.sitMillis = _twentyMins,
+    this.standMins = _twentyMins,
+    this.sitMins = _twentyMins,
     this.enableNotifications = false,
     this.enableMessaging = true,
   });
 
   @override
   String toString() {
-    return 'Options(standMillis: $standMillis, sitMillis: $sitMillis, enableNotifications: $enableNotifications, enableMessaging: $enableMessaging)';
+    return 'Options(standMillis: $standMins, sitMins: $sitMins, enableNotifications: $enableNotifications, enableMessaging: $enableMessaging)';
   }
 
   factory Options.fromJson(Map<String, dynamic> json) {
     return Options(
-      standMillis: json['standMillis'],
-      sitMillis: json['sitMillis'],
+      standMins: json['standMins'],
+      sitMins: json['sitMins'],
       enableNotifications: json['enableNotifications'] ?? false,
       enableMessaging: json['enableMessaging'] ?? true,
     );
@@ -30,8 +30,8 @@ class Options {
 
   Map<String, dynamic> toJson() {
     return {
-      'standMillis': standMillis,
-      'sitMillis': sitMillis,
+      'standMins': standMins,
+      'sitMins': sitMins,
       'enableNotifications': enableNotifications,
       'enableMessaging': enableMessaging,
     };
