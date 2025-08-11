@@ -7,7 +7,7 @@ Future<void> main() async {
   await windowManager.ensureInitialized();
 
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(250, 350),
+    size: Size(300, 350),
     center: true,
     skipTaskbar: true,
     titleBarStyle: TitleBarStyle.hidden,

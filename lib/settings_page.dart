@@ -63,9 +63,11 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   Future<void> _initNotifications() async {
     const InitializationSettings initSettings = InitializationSettings(
       linux: LinuxInitializationSettings(defaultActionName: 'OK'),
-      // windows: WindowsInitializationSettings(
-      //   guid: '',
-      // ),
+      windows: WindowsInitializationSettings(
+        guid: '12345678-1234-1234-1234-123456789abc',
+        appName: 'Sitstand',
+        appUserModelId: 'dxt.rs.sitstand',
+      ),
       macOS: DarwinInitializationSettings(),
     );
 
@@ -78,54 +80,65 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
 
     if (options == null) return;
 
-    setState(() {
-      _options = Options.fromJson(jsonDecode(options));
-    });
-
+    _options = Options.fromJson(jsonDecode(options));
+    debugPrint("setting options $options");
     _standInputController.text = _options.standMins.toString();
     _sitInputController.text = _options.sitMins.toString();
   }
 
   void _startTimer() {
+    debugPrint("start timer - ${_options.standMins}");
+    debugPrint("start timer - ${_options.sitMins}");
+
     if (_standing) {
-      _timer = Timer.periodic(Duration(minutes: _options.sitMins), (Timer t) {
-        final String title = "${_options.sitMins.toString()} Reminder";
-        final String body = "Time to switch to standing!";
-        _standing = false;
+      _timer = Timer.periodic(
+        Duration(milliseconds: _options.sitMins * 10000),
+        (Timer t) {
+          final String title =
+              "${_options.sitMins.toString()} min stand reminder";
+          final String body = "Time to switch to standing!";
+          _standing = false;
 
-        if (_options.enableNotifications) {
-          _showNotification(title, body);
-        }
-        if (_options.enableMessaging) {
-          _showMessageBox(title, body);
-        }
+          if (_options.enableNotifications) {
+            _showNotification(title, body);
+          }
+          if (_options.enableMessaging) {
+            debugPrint(title);
+            _showMessageBox(title, body);
+          }
 
-        _timer?.cancel();
-        _startTimer();
-      });
+          _timer?.cancel();
+          _startTimer();
+        },
+      );
     } else {
-      _timer = Timer.periodic(Duration(minutes: _options.standMins), (Timer t) {
-        final String title = "${_options.standMins.toString()} Reminder";
-        final String body = "Time to switch to sitting!";
-        _standing = true;
+      _timer = Timer.periodic(
+        Duration(milliseconds: _options.standMins * 10000),
+        (Timer t) {
+          final String title =
+              "${_options.standMins.toString()} min sit reminder";
+          final String body = "Time to switch to sitting!";
+          _standing = true;
 
-        if (_options.enableNotifications) {
-          _showNotification(title, body);
-        }
-        if (_options.enableMessaging) {
-          _showMessageBox(title, body);
-        }
+          if (_options.enableNotifications) {
+            _showNotification(title, body);
+          }
+          if (_options.enableMessaging) {
+            debugPrint(title);
+            _showMessageBox(title, body);
+          }
 
-        _timer?.cancel();
-        _startTimer();
-      });
+          _timer?.cancel();
+          _startTimer();
+        },
+      );
     }
   }
 
   Future<void> _showNotification(String title, String body) async {
     const NotificationDetails notificationDetails = NotificationDetails(
       linux: LinuxNotificationDetails(),
-      // windows: WindowsNotificationDetails(),
+      windows: WindowsNotificationDetails(),
       macOS: DarwinNotificationDetails(),
     );
 
@@ -136,7 +149,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     if (Platform.isWindows) {
       await Process.run('powershell', [
         '-Command',
-        '[System.Windows.Forms.MessageBox]::Show("$body", "$title")',
+        "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('$body', '$title')",
       ]);
       return;
     }
@@ -170,6 +183,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     final prefs = await SharedPreferences.getInstance();
     prefs.setString(_options.name, jsonEncode(_options.toJson()));
 
+    _startTimer();
     // await windowManager.hide();
   }
 
@@ -210,70 +224,136 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
             key: _formKey,
             child: Column(
               children: [
-                TextFormField(
-                  controller: _standInputController,
-                  decoration: const InputDecoration(
-                    labelText: 'Standing duration in mins',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (String? value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter a duration';
-                    }
-                    return null;
-                  },
-                  onChanged: (String val) => {
-                    setState(() {
-                      _options.standMins = int.parse(val);
-                    }),
-                  },
-                ),
-
-                SizedBox(height: 10),
-
-                // TextFormField(
-                //   controller: _sitInputController,
-                //   decoration: const InputDecoration(
-                //     labelText: 'Sitting duration in mins',
-                //     border: OutlineInputBorder(),
-                //   ),
-                //   validator: (String? value) {
-                //     if (value == null || value.isEmpty) {
-                //       return 'Enter a duration';
-                //     }
-                //     return null;
-                //   },
-                //   onChanged: (String val) => {
-                //     setState(() {
-                //       _options.sitMins = int.parse(val);
-                //     }),
-                //   },
-                // ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.remove),
-                      onPressed: () {
-                        setState(() {});
-                      },
-                    ),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 8,
+                    Text('Stand duration (mins)'),
+
+                    Spacer(),
+
+                    SizedBox(
+                      width: 50,
+                      height: 30,
+                      child: TextFormField(
+                        controller: _standInputController,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsetsGeometry.only(
+                            left: 10,
+                            right: 10,
+                            top: 0,
+                            bottom: 0,
+                          ),
+                        ),
+                        validator: (String? value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Enter a duration';
+                          }
+                          return null;
+                        },
+                        onChanged: (String val) => {
+                          setState(() {
+                            _options.standMins = int.parse(val);
+                          }),
+                        },
                       ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text('1', style: TextStyle(fontSize: 18)),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.add),
-                      onPressed: () {
-                        setState(() {});
-                      },
+
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.keyboard_arrow_up),
+                          padding: EdgeInsets.all(0),
+                          constraints: BoxConstraints(),
+                          onPressed: () {
+                            setState(() {
+                              _options.standMins++;
+                              _standInputController.text = _options.standMins
+                                  .toString();
+                            });
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.keyboard_arrow_down),
+                          padding: EdgeInsets.all(0),
+                          constraints: BoxConstraints(),
+                          onPressed: () {
+                            setState(() {
+                              _options.standMins--;
+                              _standInputController.text = _options.standMins
+                                  .toString();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Sit duration (mins)'),
+
+                    Spacer(),
+
+                    SizedBox(
+                      width: 50,
+                      height: 30,
+                      child: TextFormField(
+                        controller: _sitInputController,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsetsGeometry.only(
+                            left: 10,
+                            right: 10,
+                            top: 0,
+                            bottom: 0,
+                          ),
+                        ),
+                        validator: (String? value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Enter a duration';
+                          }
+                          return null;
+                        },
+                        onChanged: (String val) => {
+                          setState(() {
+                            _options.sitMins = int.parse(val);
+                          }),
+                        },
+                      ),
+                    ),
+
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.keyboard_arrow_up),
+                          padding: EdgeInsets.all(0),
+                          constraints: BoxConstraints(),
+                          onPressed: () {
+                            setState(() {
+                              _options.sitMins++;
+                              _sitInputController.text = _options.standMins
+                                  .toString();
+                            });
+                          },
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.keyboard_arrow_down),
+                          padding: EdgeInsets.all(0),
+                          constraints: BoxConstraints(),
+                          onPressed: () {
+                            setState(() {
+                              _options.sitMins--;
+                              _sitInputController.text = _options.standMins
+                                  .toString();
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -312,7 +392,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
 
                 Row(
                   children: [
-                    Expanded(child: SizedBox(width: 10)),
+                    Expanded(child: SizedBox(width: 20, height: 20)),
                     ElevatedButton(
                       onPressed: _saveOptions,
                       child: Icon(Icons.save),
