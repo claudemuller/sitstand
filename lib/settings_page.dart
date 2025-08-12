@@ -31,22 +31,26 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
 
   @override
   void initState() {
+    trayManager.addListener(this);
     super.initState();
     _initTray();
     _initNotifications();
     _initOptions();
-    _startTimer();
   }
 
   @override
   void dispose() {
     _standInputController.dispose();
     _sitInputController.dispose();
+    trayManager.removeListener(this);
     super.dispose();
   }
 
   Future<void> _initTray() async {
-    await trayManager.setIcon('assets/icon.png');
+    await trayManager.setIcon(
+      Platform.isWindows ? 'images/tray_icon.ico' : 'assets/icon.png',
+    );
+    // await trayManager.setToolTip('Sitstand');
 
     await trayManager.setContextMenu(
       Menu(
@@ -56,8 +60,6 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
         ],
       ),
     );
-
-    trayManager.addListener(this);
   }
 
   Future<void> _initNotifications() async {
@@ -78,18 +80,19 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     final prefs = await SharedPreferences.getInstance();
     final String? options = prefs.getString(_options.name);
 
-    if (options == null) return;
+    if (options == null) {
+      _saveOptions();
+      return;
+    }
 
     _options = Options.fromJson(jsonDecode(options));
-    debugPrint("setting options $options");
     _standInputController.text = _options.standMins.toString();
     _sitInputController.text = _options.sitMins.toString();
+
+    _startTimer();
   }
 
   void _startTimer() {
-    debugPrint("start timer - ${_options.standMins}");
-    debugPrint("start timer - ${_options.sitMins}");
-
     if (_standing) {
       _timer = Timer.periodic(
         Duration(milliseconds: _options.sitMins * 10000),
@@ -99,13 +102,8 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
           final String body = "Time to switch to standing!";
           _standing = false;
 
-          if (_options.enableNotifications) {
-            _showNotification(title, body);
-          }
-          if (_options.enableMessaging) {
-            debugPrint(title);
-            _showMessageBox(title, body);
-          }
+          _options.enableNotifications ? _showNotification(title, body) : null;
+          _options.enableMessaging ? _showMessageBox(title, body) : null;
 
           _timer?.cancel();
           _startTimer();
@@ -120,13 +118,8 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
           final String body = "Time to switch to sitting!";
           _standing = true;
 
-          if (_options.enableNotifications) {
-            _showNotification(title, body);
-          }
-          if (_options.enableMessaging) {
-            debugPrint(title);
-            _showMessageBox(title, body);
-          }
+          _options.enableNotifications ? _showNotification(title, body) : null;
+          _options.enableMessaging ? _showMessageBox(title, body) : null;
 
           _timer?.cancel();
           _startTimer();
@@ -184,7 +177,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     prefs.setString(_options.name, jsonEncode(_options.toJson()));
 
     _startTimer();
-    // await windowManager.hide();
+    await windowManager.hide();
   }
 
   @override
@@ -196,6 +189,22 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   void onTrayMenuItemClick(MenuItem menuItem) async {
     switch (menuItem.key) {
       case 'options':
+        final trayBounds = await trayManager.getBounds();
+        debugPrint("trayBounds: $trayBounds");
+        if (trayBounds == null) {
+          await windowManager.center();
+          await windowManager.show();
+          return;
+        }
+
+        final windowSize = await windowManager.getSize();
+        double x =
+            trayBounds.left + (trayBounds.width / 2) - (windowSize.width / 2);
+        double y = trayBounds.bottom; // directly under the icon
+
+        await windowManager.setBounds(
+          Rect.fromLTWH(x, y, windowSize.width, windowSize.height),
+        );
         await windowManager.show();
         await windowManager.focus();
         break;
@@ -236,6 +245,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                       height: 30,
                       child: TextFormField(
                         controller: _standInputController,
+                        textAlign: TextAlign.center,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsetsGeometry.only(
@@ -303,6 +313,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                       height: 30,
                       child: TextFormField(
                         controller: _sitInputController,
+                        textAlign: TextAlign.center,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsetsGeometry.only(

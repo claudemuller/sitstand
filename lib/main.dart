@@ -14,7 +14,7 @@ Future<void> main() async {
   );
 
   windowManager.waitUntilReadyToShow(windowOptions, () async {
-    // await windowManager.hide(); // Hides window at launch
+    await windowManager.hide();
   });
 
   runApp(const App());
