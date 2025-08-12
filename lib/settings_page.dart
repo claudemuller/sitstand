@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -28,7 +27,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
 
   Options _options = Options();
   Timer? _timer;
-  bool _standing = false;
+  bool _isStanding = false;
 
   @override
   void initState() {
@@ -94,14 +93,18 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   }
 
   void _startTimer() {
-    if (_standing) {
+    if (_timer?.isActive ?? false) {
+      return;
+    }
+
+    if (_isStanding) {
       _timer = Timer.periodic(
-        Duration(milliseconds: _options.sitMins * 10000),
+        Duration(milliseconds: _options.sitMins * 60 * 1000),
         (Timer t) {
           final String title =
-              "${_options.sitMins.toString()} min stand reminder";
+              "${_options.sitMins.toString()} min sitting reminder";
           final String body = "Time to switch to standing!";
-          _standing = false;
+          _isStanding = false;
 
           _options.enableNotifications ? _showNotification(title, body) : null;
           _options.enableMessaging ? _showMessageBox(title, body) : null;
@@ -112,12 +115,12 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
       );
     } else {
       _timer = Timer.periodic(
-        Duration(milliseconds: _options.standMins * 10000),
+        Duration(milliseconds: _options.standMins * 60 * 1000),
         (Timer t) {
           final String title =
-              "${_options.standMins.toString()} min sit reminder";
+              "${_options.standMins.toString()} min standing reminder";
           final String body = "Time to switch to sitting!";
-          _standing = true;
+          _isStanding = true;
 
           _options.enableNotifications ? _showNotification(title, body) : null;
           _options.enableMessaging ? _showMessageBox(title, body) : null;
@@ -177,7 +180,9 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     final prefs = await SharedPreferences.getInstance();
     prefs.setString(_options.name, jsonEncode(_options.toJson()));
 
+    _timer?.cancel();
     _startTimer();
+
     await windowManager.hide();
   }
 
@@ -190,28 +195,9 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   void onTrayMenuItemClick(MenuItem menuItem) async {
     switch (menuItem.key) {
       case 'options':
-        Rect? trayBounds;
-        if (!Platform.isLinux) {
-          trayBounds = await trayManager.getBounds();
-        }
-
-        if (trayBounds == null) {
-          await windowManager.center();
-          await windowManager.show();
-          return;
-        }
-
-        final windowSize = await windowManager.getSize();
-        double x =
-            trayBounds.left + (trayBounds.width / 2) - (windowSize.width / 2);
-        double y = trayBounds.bottom;
-
-        await windowManager.setBounds(
-          Rect.fromLTWH(x, y, windowSize.width, windowSize.height),
-        );
+        await windowManager.center();
         await windowManager.show();
         await windowManager.focus();
-        break;
 
       case 'exit':
         _timer?.cancel();
@@ -227,7 +213,15 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Row(
+          children: [
+            Image.asset('assets/icon.png', height: 32),
+
+            SizedBox(width: 10),
+
+            Text(widget.title),
+          ],
+        ),
       ),
 
       body: Center(
@@ -267,7 +261,9 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                         },
                         onChanged: (String val) => {
                           setState(() {
-                            _options.standMins = int.parse(val);
+                            if (val.isNotEmpty) {
+                              _options.standMins = int.parse(val);
+                            }
                           }),
                         },
                       ),
@@ -335,7 +331,9 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                         },
                         onChanged: (String val) => {
                           setState(() {
-                            _options.sitMins = int.parse(val);
+                            if (val.isNotEmpty) {
+                              _options.sitMins = int.parse(val);
+                            }
                           }),
                         },
                       ),
@@ -351,7 +349,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                           onPressed: () {
                             setState(() {
                               _options.sitMins++;
-                              _sitInputController.text = _options.standMins
+                              _sitInputController.text = _options.sitMins
                                   .toString();
                             });
                           },
@@ -363,7 +361,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                           onPressed: () {
                             setState(() {
                               _options.sitMins--;
-                              _sitInputController.text = _options.standMins
+                              _sitInputController.text = _options.sitMins
                                   .toString();
                             });
                           },
@@ -408,9 +406,17 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
                 Row(
                   children: [
                     Expanded(child: SizedBox(width: 20, height: 20)),
+
+                    ElevatedButton(
+                      onPressed: () => {windowManager.hide()},
+                      child: Text('Cancel'), //Icon(Icons.save),
+                    ),
+
+                    SizedBox(width: 10),
+
                     ElevatedButton(
                       onPressed: _saveOptions,
-                      child: Icon(Icons.save),
+                      child: Text('Save'), //Icon(Icons.save),
                     ),
                   ],
                 ),
