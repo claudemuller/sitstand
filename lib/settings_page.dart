@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -189,8 +190,11 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   void onTrayMenuItemClick(MenuItem menuItem) async {
     switch (menuItem.key) {
       case 'options':
-        final trayBounds = await trayManager.getBounds();
-        debugPrint("trayBounds: $trayBounds");
+        Rect? trayBounds;
+        if (!Platform.isLinux) {
+          trayBounds = await trayManager.getBounds();
+        }
+
         if (trayBounds == null) {
           await windowManager.center();
           await windowManager.show();
@@ -200,7 +204,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
         final windowSize = await windowManager.getSize();
         double x =
             trayBounds.left + (trayBounds.width / 2) - (windowSize.width / 2);
-        double y = trayBounds.bottom; // directly under the icon
+        double y = trayBounds.bottom;
 
         await windowManager.setBounds(
           Rect.fromLTWH(x, y, windowSize.width, windowSize.height),
