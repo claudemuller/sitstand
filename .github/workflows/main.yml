@@ -61,13 +61,30 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Install Inno Setup
+        if: matrix.os == 'windows-latest'
+        run: choco install innosetup
+
       - name: Build for ${{ matrix.os }}
         run: ${{ matrix.build_cmd }}
+
+      - name: Create Windows Installer
+        if: matrix.os == 'windows-latest'
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
+      - name: Upload Windows installer
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sitstand-setup.exe
+          path: sitstand-setup.exe
 
       - name: Package artifact on Windows
         if: matrix.os == 'windows-latest'
         run: |
-          pwsh -Command "Compress-Archive -Path build/windows/runner/Release/* -DestinationPath ${{ matrix.artifact_name }}"
+          $files = Get-ChildItem -Path build/windows/runner/Release -Recurse | ForEach-Object { $_.FullName }
+          Compress-Archive -Path $files -DestinationPath ${{ matrix.artifact_name }}
         shell: pwsh
 
       - name: Package artifact on Linux/macOS
@@ -103,6 +120,11 @@ jobs:
         with:
           name: sitstand-win.zip
 
+      - name: Download Windows setup artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sitstand-setup.exe
+
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
         with:
@@ -137,5 +159,6 @@ jobs:
           artifacts: |
             sitstand-mac.zip
             sitstand-win.zip
+            sitstand-setup.exe
             sitstand-linux.AppImage
           allowUpdates: true
