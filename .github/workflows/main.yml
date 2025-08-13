@@ -108,3 +108,4 @@ jobs:
           artifacts: ${{ matrix.artifact_name }}
           tag: v${{ env.VERSION }}
           token: ${{ secrets.TOKEN }}
+          overwrite: true

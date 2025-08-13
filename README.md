@@ -4,22 +4,19 @@ A cross-platform app that reminds you to alternate between sitting and standing.
 
 ## Download
 
-- Windows [releases]()
+- Download binaries for Linux, Windows or MacOS from the [releases](https://github.com/claudemuller/sitstand/releases) page.
 
 ## Building from source
 
-Sitstand is written in Dart with Flutter.
+Sitstand is written in Dart with Flutter, so you'll need those set up.
 
 ### Requriments
 
-- [Flutter]()
-- [Dart]()
+- [Flutter](https://flutter.dev/)
+- [Dart](https://dart.dev/)
+- [libayatana-appindicator](https://github.com/AyatanaIndicators/libayatana-appindicator-glib) (Linux)
 
 ### Building for Linux
-
-#### Requriments
-
-- libayatana-
 
 ```bash
 flutter build linux
