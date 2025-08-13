@@ -50,17 +50,30 @@ jobs:
             artifact_name: sitstand-linux.AppImage
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - run: flutter pub get
+      - name: Install Dependencies
+        run: flutter pub get
 
-      - run: ${{ matrix.build_cmd }}
+      - name: Build for ${{ matrix.os }}
+        run: ${{ matrix.build_cmd }}
 
-      - run: zip -r ${{ matrix.artifact_name }} ${{ matrix.artifact_path }}
+      - name: Package artifact on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          pwsh -Command "Compress-Archive -Path build/windows/runner/Release/* -DestinationPath ${{ matrix.artifact_name }}"
+        shell: pwsh
+
+      - name: Package artifact on Linux/macOS
+        if: matrix.os != 'windows-latest'
+        run: zip -r ${{ matrix.artifact_name }} ${{ matrix.artifact_path }}
+        shell: bash
 
       - uses: actions/upload-artifact@v4
         with:
