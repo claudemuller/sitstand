@@ -21,7 +21,7 @@ jobs:
             artifact_name: sitstand-mac.zip
           - os: windows-latest
             build_cmd: flutter build windows --release
-            artifact_path: build/windows/runner/Release
+            artifact_path: build/windows/x64/runner/Release
             artifact_name: sitstand-win.zip
           - os: ubuntu-latest
             build_cmd: |
@@ -71,7 +71,7 @@ jobs:
       - name: Create Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
-          dir build\windows
+          dir build\windows\x64
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
         shell: pwsh
 
