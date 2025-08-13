@@ -3,6 +3,7 @@ AppName=SitStand
 AppVersion=1.0
 DefaultDirName={pf}\SitStand
 DefaultGroupName=SitStand
+OutputDir=Output
 OutputBaseFilename=sitstand-setup
 Compression=lzma
 SolidCompression=yes
