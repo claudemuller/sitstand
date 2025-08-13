@@ -71,7 +71,6 @@ jobs:
       - name: Create Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
-          dir build\windows\x64
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
         shell: pwsh
 
@@ -85,7 +84,7 @@ jobs:
       - name: Package artifact on Windows
         if: matrix.os == 'windows-latest'
         run: |
-          $files = Get-ChildItem -Path build/windows/runner/Release -Recurse | ForEach-Object { $_.FullName }
+          $files = Get-ChildItem -Path build/windows/x64/runner/Release -Recurse | ForEach-Object { $_.FullName }
           Compress-Archive -Path $files -DestinationPath ${{ matrix.artifact_name }}
         shell: pwsh
 
