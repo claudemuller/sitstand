@@ -4,7 +4,7 @@ A cross-platform app that reminds you to alternate between sitting and standing.
 
 ## Download
 
-- [releases]()
+- Windows [releases]()
 
 ## Building from source
 
