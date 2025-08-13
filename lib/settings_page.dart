@@ -77,7 +77,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   }
 
   Future<void> _initOptions() async {
-    final prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? options = prefs.getString(_options.name);
 
     if (options == null) {
@@ -85,7 +85,9 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
       return;
     }
 
-    _options = Options.fromJson(jsonDecode(options));
+    setState(() {
+      _options = Options.fromJson(jsonDecode(options));
+    });
     _standInputController.text = _options.standMins.toString();
     _sitInputController.text = _options.sitMins.toString();
 
@@ -177,7 +179,7 @@ class _SettingsPageState extends State<SettingsPage> with TrayListener {
   }
 
   Future<void> _saveOptions() async {
-    final prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString(_options.name, jsonEncode(_options.toJson()));
 
     _timer?.cancel();
