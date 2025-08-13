@@ -140,7 +140,7 @@ jobs:
         shell: bash
 
       - name: Extract version from pubspec.yaml for Windows
-        id: extract_version
+        id: extract_version_win
         if: matrix.os == 'windows-latest'
         run: |
           $version = (Select-String -Path pubspec.yaml -Pattern '^version: ' | ForEach-Object {
