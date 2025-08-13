@@ -71,7 +71,9 @@ jobs:
       - name: Create Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
+          dir build\windows\runner\Release
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+        shell: pwsh
 
       - name: Upload Windows installer
         if: matrix.os == 'windows-latest'
