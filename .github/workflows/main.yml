@@ -100,9 +100,20 @@ jobs:
 
       - name: Extract version from pubspec.yaml
         id: extract_version
+        if: matrix.os != 'windows-latest'
         run: |
           version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
           echo "VERSION=$version" >> $GITHUB_ENV
+
+      - name: Extract version from pubspec.yaml for Windows
+        id: extract_version_win
+        if: matrix.os == 'windows-latest'
+        run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version: ' | ForEach-Object {
+            ($_ -split '\s+')[1].Trim()
+          })
+          Write-Output "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding ascii -Append
+        shell: pwsh
 
   release:
     name: Create Release
