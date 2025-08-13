@@ -41,7 +41,7 @@ jobs:
               EOF
 
               cp build/linux/x64/release/bundle/sitstand AppDir/
-              cp path/to/icon.png AppDir/sitstand.png
+              cp assets/icon.png AppDir/sitstand.png
 
               wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
               chmod +x linuxdeploy-x86_64.AppImage
