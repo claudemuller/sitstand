@@ -71,7 +71,7 @@ jobs:
       - name: Create Windows Installer
         if: matrix.os == 'windows-latest'
         run: |
-          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
       - name: Upload Windows installer
         if: matrix.os == 'windows-latest'
