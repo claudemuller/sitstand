@@ -32,7 +32,7 @@ jobs:
               # Prepare sitstand.AppDir
               mkdir -p sitstand.AppDir/usr/bin
 
-              cp -r build/linux/x64/release/bundle/* sitstand.AppDir/usr/bin
+              cp -r build/linux/x64/release/bundle/sitstand sitstand.AppDir/usr/bin
               cp assets/icon.png sitstand.AppDir/sitstand.png
 
               cat > sitstand.AppDir/AppRun <<EOF
