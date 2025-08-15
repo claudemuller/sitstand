@@ -29,21 +29,21 @@ jobs:
               sudo apt-get install -y libgtk-3-dev cmake ninja-build libblkid-dev liblzma-dev libayatana-appindicator3-dev
               flutter build linux --release
 
-              # Prepare AppDir
-              mkdir -p AppDir/usr/bin
+              # Prepare sitstand.AppDir
+              mkdir -p sitstand.AppDir/usr/bin
 
-              cp -r build/linux/x64/release/bundle/* AppDir/usr/bin
-              cp assets/icon.png AppDir/sitstand.png
+              cp -r build/linux/x64/release/bundle/* sitstand.AppDir/usr/bin
+              cp assets/icon.png sitstand.AppDir/sitstand.png
 
-              cat > AppDir/AppRun <<EOF
+              cat > sitstand.AppDir/AppRun <<EOF
               #!/bin/bash
               HERE="$(dirname "$(readlink -f "${0}")")"
               exec "$HERE/usr/bin/sitstand"
               EOF
 
-              chmod +x AppDir/AppRun
+              chmod +x sitstand.AppDir/AppRun
 
-              cat > AppDir/sitstand.desktop <<EOF
+              cat > sitstand.AppDir/sitstand.desktop <<EOF
               [Desktop Entry]
               Type=Application
               Name=SitStand
@@ -54,7 +54,7 @@ jobs:
               
               wget https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
               chmod +x appimagetool-x86_64.AppImage
-              ./appimagetool-x86_64.AppImage AppDir
+              ./appimagetool-x86_64.AppImage sitstand.AppDir sitstand-linux.AppImage
             artifact_path: build/linux/x64/release/bundle
             artifact_name: sitstand-linux.AppImage
 
