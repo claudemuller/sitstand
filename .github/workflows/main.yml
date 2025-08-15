@@ -32,7 +32,7 @@ jobs:
               # Prepare AppDir
               mkdir -p AppDir/usr/bin
 
-              cp build/linux/x64/release/bundle/* AppDir/usr/bin
+              cp -r build/linux/x64/release/bundle/* AppDir/usr/bin
               cp assets/icon.png AppDir/icon.png
 
               cat > AppDir/AppRun <<EOF
