@@ -33,7 +33,7 @@ jobs:
               mkdir -p AppDir/usr/bin
 
               cp -r build/linux/x64/release/bundle/* AppDir/usr/bin
-              cp assets/icon.png AppDir/icon.png
+              cp assets/icon.png AppDir/sitstand.png
 
               cat > AppDir/AppRun <<EOF
               #!/bin/bash
