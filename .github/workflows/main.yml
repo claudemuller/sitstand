@@ -33,12 +33,13 @@ jobs:
               mkdir -p sitstand.AppDir/usr/bin
 
               cp -r build/linux/x64/release/bundle/sitstand sitstand.AppDir/usr/bin
+              chmod +x sitstand.AppDir/usr/bin/sitstand
               cp assets/icon.png sitstand.AppDir/sitstand.png
 
               cat > sitstand.AppDir/AppRun <<EOF
               #!/bin/bash
               HERE="$(dirname "$(readlink -f "${0}")")"
-              exec "$HERE/usr/bin/sitstand"
+              exec "$HERE/usr/bin/sitstand" "$@"
               EOF
 
               chmod +x sitstand.AppDir/AppRun
